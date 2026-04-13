@@ -13,6 +13,16 @@ API REST para conectar el frontend React con la logica de compilacion y la creac
 mvn spring-boot:run
 ```
 
+Antes de ejecutar por primera vez, puedes forzar la generacion del parser/lexer desde la gramatica:
+
+```bash
+mvn clean generate-sources
+```
+
+Maven genera clases Java ANTLR3 en:
+
+- `target/generated-sources/antlr3`
+
 Servidor por defecto: `http://localhost:8080`
 
 ## Endpoints
@@ -21,7 +31,7 @@ Servidor por defecto: `http://localhost:8080`
 
 ```json
 {
-  "program": "CREAR BD tienda; ..."
+  "program": "crear base tienda; tabla usuarios con: id como numero, nombre como texto;"
 }
 ```
 
@@ -32,6 +42,32 @@ Servidor por defecto: `http://localhost:8080`
   "sql": "CREATE DATABASE ...;"
 }
 ```
+
+## Gramatica LenguajeDB (ANTLR3)
+
+El sistema compila scripts con esta sintaxis:
+
+```txt
+script            : declaracion_base declaracion_tabla+ EOF
+declaracion_base  : 'crear base' ID ';'
+declaracion_tabla : 'tabla' ID 'con:' campo (',' campo)* ';'
+campo             : ID 'como' tipo
+tipo              : 'texto' | 'numero' | 'fecha'
+```
+
+Ejemplo completo:
+
+```txt
+crear base tienda_virtual;
+tabla usuarios con: id como numero, nombre como texto, correo como texto;
+tabla pedidos con: id como numero, usuario_id como numero, fecha_pedido como fecha;
+```
+
+Archivo de gramatica ANTLR3 en el repositorio:
+
+- `src/main/antlr3/LenguajeDB.g`
+
+El backend consume directamente las clases generadas por ANTLR3 desde `CompilerService`.
 
 ## CORS
 

@@ -4,176 +4,179 @@ import com.compiladorbd.backend.compiler.dto.CompileError;
 import com.compiladorbd.backend.compiler.dto.CompileResponse;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class CompilerService {
 
-    private static final Pattern CREATE_DB_PATTERN = Pattern.compile("^CREAR\\s+BD\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;?$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern USE_DB_PATTERN = Pattern.compile("^USAR\\s+BD\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;?$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern CREATE_TABLE_PATTERN = Pattern.compile("^CREAR\\s+TABLA\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\($", Pattern.CASE_INSENSITIVE);
-    private static final Pattern CLOSE_TABLE_PATTERN = Pattern.compile("^\\)\\s*;?\\s*$");
-    private static final Pattern COLUMN_PATTERN = Pattern.compile("^([A-Za-z_][A-Za-z0-9_]*)\\s+([A-Za-z]+(?:\\(\\d+(?:,\\d+)?\\))?)(.*)$", Pattern.CASE_INSENSITIVE);
-
     public CompileResponse compile(String program) {
-        List<String> lines = List.of(program.split("\\R", -1));
-        List<CompileError> errors = new ArrayList<>();
+        if (program == null || program.isBlank()) {
+            return new CompileResponse(
+                    List.of(new CompileError(1, "Debes enviar un script con la gramatica LenguajeDB.")),
+                    "",
+                    ""
+            );
+        }
+
+        try {
+            Object parser = createParser(program);
+            invokeScript(parser);
+
+            if (getSyntaxErrorsCount(parser) > 0) {
+                return new CompileResponse(
+                        List.of(new CompileError(1, "El script contiene errores de sintaxis LenguajeDB.")),
+                        "",
+                        ""
+                );
+            }
+
+            String databaseName = getStringField(parser, "nombreBaseDatos");
+            List<?> tables = getListField(parser, "tablas");
+            return buildResponse(databaseName, tables);
+        } catch (InvocationTargetException invocationTargetException) {
+            Throwable rootCause = invocationTargetException.getTargetException();
+            String message = rootCause == null ? invocationTargetException.getMessage() : rootCause.getMessage();
+            return new CompileResponse(
+                    List.of(new CompileError(1, "Error de sintaxis: " + safeMessage(message))),
+                    "",
+                    ""
+            );
+        } catch (Exception exception) {
+            return new CompileResponse(
+                    List.of(new CompileError(1, "No se pudo procesar la gramatica: " + safeMessage(exception.getMessage()))),
+                    "",
+                    ""
+            );
+        }
+    }
+
+    private Object createParser(String program) throws Exception {
+        Class<?> antlrInputClass = Class.forName("org.antlr.runtime.ANTLRStringStream");
+        Object input = antlrInputClass.getConstructor(String.class).newInstance(program);
+
+        Class<?> charStreamClass = Class.forName("org.antlr.runtime.CharStream");
+        Class<?> lexerClass = Class.forName("com.compiladorbd.backend.compiler.antlr.LenguajeDBLexer");
+        Object lexer = lexerClass.getConstructor(charStreamClass).newInstance(input);
+
+        Class<?> tokenSourceClass = Class.forName("org.antlr.runtime.TokenSource");
+        Class<?> commonTokenStreamClass = Class.forName("org.antlr.runtime.CommonTokenStream");
+        Object tokenStream = commonTokenStreamClass.getConstructor(tokenSourceClass).newInstance(lexer);
+
+        Class<?> parserClass = Class.forName("com.compiladorbd.backend.compiler.antlr.LenguajeDBParser");
+        Class<?> tokenStreamClass = Class.forName("org.antlr.runtime.TokenStream");
+        return parserClass.getConstructor(tokenStreamClass).newInstance(tokenStream);
+    }
+
+    private void invokeScript(Object parser) throws Exception {
+        Method scriptMethod = parser.getClass().getMethod("script");
+        scriptMethod.invoke(parser);
+    }
+
+    private int getSyntaxErrorsCount(Object parser) throws Exception {
+        Class<?> baseRecognizerClass = Class.forName("org.antlr.runtime.BaseRecognizer");
+        Method getSyntaxErrorsMethod = baseRecognizerClass.getMethod("getNumberOfSyntaxErrors");
+        Object value = getSyntaxErrorsMethod.invoke(parser);
+        return value instanceof Integer ? (Integer) value : 0;
+    }
+
+    private String getStringField(Object parser, String fieldName) throws Exception {
+        Field field = parser.getClass().getField(fieldName);
+        Object value = field.get(parser);
+        return value == null ? "" : value.toString();
+    }
+
+    private List<?> getListField(Object parser, String fieldName) throws Exception {
+        Field field = parser.getClass().getField(fieldName);
+        Object value = field.get(parser);
+        return value instanceof List<?> ? (List<?>) value : List.of();
+    }
+
+    private CompileResponse buildResponse(String databaseName, List<?> tablas) {
+        if (databaseName == null || databaseName.isBlank()) {
+            return new CompileResponse(
+                    List.of(new CompileError(1, "No se pudo obtener el nombre de la base de datos.")),
+                    "",
+                    ""
+            );
+        }
+
+        List<?> safeTables = tablas == null ? List.of() : tablas;
+
         List<String> sqlBlocks = new ArrayList<>();
-        List<TableDef> tables = new ArrayList<>();
-        String dbName = "";
+        sqlBlocks.add("CREATE DATABASE IF NOT EXISTS " + databaseName + ";");
+        sqlBlocks.add("USE " + databaseName + ";");
 
-        int index = 0;
-        while (index < lines.size()) {
-            String rawLine = lines.get(index);
-            String line = rawLine.trim();
-            int lineNumber = index + 1;
+        try {
+            for (Object table : safeTables) {
+                String tableName = readPublicStringField(table, "nombre");
+                List<?> atributos = readPublicListField(table, "atributos");
 
-            if (line.isEmpty() || line.startsWith("//") || line.startsWith("#")) {
-                index++;
-                continue;
+                List<String> sqlColumns = new ArrayList<>();
+                for (Object atributo : atributos) {
+                    String nombre = readPublicStringField(atributo, "nombre");
+                    String tipo = readPublicStringField(atributo, "tipo");
+                    sqlColumns.add("  " + nombre + " " + sqlType(tipo));
+                }
+
+                sqlBlocks.add("CREATE TABLE IF NOT EXISTS " + tableName + " (\\n"
+                        + String.join(",\\n", sqlColumns)
+                        + "\\n);");
             }
 
-            Matcher createDbMatcher = CREATE_DB_PATTERN.matcher(line);
-            if (createDbMatcher.matches()) {
-                if (!line.endsWith(";")) {
-                    errors.add(new CompileError(lineNumber, "Falta el punto y coma al final de CREAR BD."));
-                }
+            List<String> structureLines = new ArrayList<>();
+            structureLines.add("Base de datos: " + databaseName);
+            structureLines.add("Cantidad de tablas: " + safeTables.size());
 
-                dbName = createDbMatcher.group(1);
-                sqlBlocks.add("CREATE DATABASE IF NOT EXISTS " + dbName + ";");
-                sqlBlocks.add("USE " + dbName + ";");
-                index++;
-                continue;
-            }
+            for (Object table : safeTables) {
+                String tableName = readPublicStringField(table, "nombre");
+                List<?> atributos = readPublicListField(table, "atributos");
 
-            Matcher useDbMatcher = USE_DB_PATTERN.matcher(line);
-            if (useDbMatcher.matches()) {
-                if (!line.endsWith(";")) {
-                    errors.add(new CompileError(lineNumber, "Falta el punto y coma al final de USAR BD."));
-                }
-
-                String selectedDb = useDbMatcher.group(1);
-                if (dbName.isBlank()) {
-                    dbName = selectedDb;
-                }
-                sqlBlocks.add("USE " + selectedDb + ";");
-                index++;
-                continue;
-            }
-
-            Matcher createTableMatcher = CREATE_TABLE_PATTERN.matcher(line);
-            if (createTableMatcher.matches()) {
-                String tableName = createTableMatcher.group(1);
-                List<ColumnDef> columns = new ArrayList<>();
-                boolean closed = false;
-
-                index++;
-                while (index < lines.size()) {
-                    String tableRawLine = lines.get(index);
-                    String tableLine = tableRawLine.trim();
-                    int tableLineNumber = index + 1;
-
-                    if (tableLine.isEmpty() || tableLine.startsWith("//") || tableLine.startsWith("#")) {
-                        index++;
-                        continue;
-                    }
-
-                    if (CLOSE_TABLE_PATTERN.matcher(tableLine).matches()) {
-                        if (!tableLine.endsWith(";")) {
-                            errors.add(new CompileError(tableLineNumber, "La tabla debe cerrarse con \");\"."));
-                        }
-                        closed = true;
-                        index++;
-                        break;
-                    }
-
-                    String normalizedLine = tableLine.endsWith(",")
-                            ? tableLine.substring(0, tableLine.length() - 1).trim()
-                            : tableLine;
-
-                    Matcher columnMatcher = COLUMN_PATTERN.matcher(normalizedLine);
-                    if (!columnMatcher.matches()) {
-                        errors.add(new CompileError(
-                                tableLineNumber,
-                                "Definicion de columna invalida. Formato esperado: nombre TIPO [restricciones]."
-                        ));
-                        index++;
-                        continue;
-                    }
-
-                    String columnName = columnMatcher.group(1);
-                    String columnType = columnMatcher.group(2).toUpperCase(Locale.ROOT);
-                    String constraints = normalizeConstraints(columnMatcher.group(3));
-
-                    columns.add(new ColumnDef(columnName, columnType, constraints));
-                    index++;
-                }
-
-                if (!closed) {
-                    errors.add(new CompileError(lineNumber, "La tabla " + tableName + " no tiene cierre \");\"."));
-                    break;
-                }
-
-                if (columns.isEmpty()) {
-                    errors.add(new CompileError(lineNumber, "La tabla " + tableName + " no contiene columnas."));
-                }
-
-                tables.add(new TableDef(tableName, columns));
-
-                List<String> sqlColumns = columns.stream()
-                        .map(column -> "  " + column.name() + " " + column.type() + (column.constraints().isBlank() ? "" : " " + column.constraints()))
-                        .toList();
-
-                sqlBlocks.add("CREATE TABLE IF NOT EXISTS " + tableName + " (\n" + String.join(",\n", sqlColumns) + "\n);");
-                continue;
-            }
-
-            errors.add(new CompileError(lineNumber, "Instruccion no reconocida. Usa CREAR BD, USAR BD o CREAR TABLA."));
-            index++;
-        }
-
-        List<String> structureLines = new ArrayList<>();
-        structureLines.add("Base de datos: " + (dbName.isBlank() ? "No definida" : dbName));
-        structureLines.add("Cantidad de tablas: " + tables.size());
-
-        if (tables.isEmpty()) {
-            structureLines.add("No se encontraron tablas en el programa.");
-        } else {
-            for (TableDef table : tables) {
                 structureLines.add("");
-                structureLines.add("Tabla: " + table.name());
-                if (table.columns().isEmpty()) {
-                    structureLines.add("  - Sin columnas definidas");
-                    continue;
-                }
-
-                for (ColumnDef column : table.columns()) {
-                    String extra = column.constraints().isBlank() ? "" : " (" + column.constraints() + ")";
-                    structureLines.add("  - " + column.name() + ": " + column.type() + extra);
+                structureLines.add("Tabla: " + tableName);
+                for (Object atributo : atributos) {
+                    String nombre = readPublicStringField(atributo, "nombre");
+                    String tipo = readPublicStringField(atributo, "tipo");
+                    structureLines.add("  - " + nombre + ": " + tipo);
                 }
             }
+
+            return new CompileResponse(List.of(), String.join("\n\n", sqlBlocks), String.join("\n", structureLines));
+        } catch (Exception exception) {
+            return new CompileResponse(
+                    List.of(new CompileError(1, "No se pudo leer el resultado del parser ANTLR3: " + safeMessage(exception.getMessage()))),
+                    "",
+                    ""
+            );
         }
-
-        return new CompileResponse(errors, String.join("\n\n", sqlBlocks), String.join("\n", structureLines));
     }
 
-    private String normalizeConstraints(String rawConstraints) {
-        return rawConstraints
-                .replaceAll("(?i)\\bPK\\b", "PRIMARY KEY")
-                .replaceAll("(?i)\\bUNICO\\b", "UNIQUE")
-                .replaceAll("(?i)\\bAUTOINC\\b", "AUTO_INCREMENT")
-                .replaceAll("(?i)\\bNN\\b", "NOT NULL")
-                .replaceAll("\\s+", " ")
-                .trim();
+    private String readPublicStringField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getField(fieldName);
+        Object value = field.get(target);
+        return value == null ? "" : value.toString();
     }
 
-    private record TableDef(String name, List<ColumnDef> columns) {
+    private List<?> readPublicListField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getField(fieldName);
+        Object value = field.get(target);
+        return value instanceof List<?> ? (List<?>) value : List.of();
     }
 
-    private record ColumnDef(String name, String type, String constraints) {
+    private String sqlType(String logicalType) {
+        String normalizedType = logicalType == null ? "" : logicalType.toLowerCase();
+        return switch (normalizedType) {
+            case "texto" -> "VARCHAR(255)";
+            case "numero" -> "INT";
+            case "fecha" -> "DATE";
+            default -> "VARCHAR(255)";
+        };
+    }
+
+    private String safeMessage(String message) {
+        return message == null || message.isBlank() ? "Sin detalle." : message;
     }
 }
