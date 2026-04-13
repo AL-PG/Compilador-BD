@@ -1,4 +1,15 @@
-export const SAMPLE_PROGRAM = `crear base tienda_virtual;
+export const SAMPLE_PROGRAM = `crear base TiendaOnline;
 
-tabla usuarios con: id como numero, nombre como texto, correo como texto;
-tabla pedidos con: id como numero, usuario_id como numero, fecha_pedido como fecha;`
+tabla Clientes con:
+    nombre como texto,
+    telefono como numero,
+    nacimiento como fecha;
+
+tabla Productos con:
+    codigo_barras como numero,
+    descripcion como texto;
+
+tabla Pedidos con:
+    folio como numero,
+    fecha_compra como fecha,
+    estatus como texto;`

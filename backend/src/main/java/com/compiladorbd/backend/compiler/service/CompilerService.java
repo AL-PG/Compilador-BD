@@ -26,6 +26,11 @@ public class CompilerService {
             Object parser = createParser(program);
             invokeScript(parser);
 
+            List<CompileError> syntaxErrors = extractSyntaxErrors(parser);
+            if (!syntaxErrors.isEmpty()) {
+                return new CompileResponse(syntaxErrors, "", "");
+            }
+
             if (getSyntaxErrorsCount(parser) > 0) {
                 return new CompileResponse(
                         List.of(new CompileError(1, "El script contiene errores de sintaxis LenguajeDB.")),
@@ -52,6 +57,22 @@ public class CompilerService {
                     ""
             );
         }
+    }
+
+    private List<CompileError> extractSyntaxErrors(Object parser) throws Exception {
+        List<?> rawErrors = getListField(parser, "erroresSintaxis");
+        if (rawErrors.isEmpty()) {
+            return List.of();
+        }
+
+        List<CompileError> parsedErrors = new ArrayList<>();
+        for (Object rawError : rawErrors) {
+            int line = readPublicIntField(rawError, "line");
+            String message = readPublicStringField(rawError, "message");
+            parsedErrors.add(new CompileError(Math.max(line, 1), safeMessage(message)));
+        }
+
+        return parsedErrors;
     }
 
     private Object createParser(String program) throws Exception {
@@ -122,9 +143,9 @@ public class CompilerService {
                     sqlColumns.add("  " + nombre + " " + sqlType(tipo));
                 }
 
-                sqlBlocks.add("CREATE TABLE IF NOT EXISTS " + tableName + " (\\n"
-                        + String.join(",\\n", sqlColumns)
-                        + "\\n);");
+                sqlBlocks.add("CREATE TABLE IF NOT EXISTS " + tableName + " (\n"
+                    + String.join(",\n", sqlColumns)
+                    + "\n);");
             }
 
             List<String> structureLines = new ArrayList<>();
@@ -164,6 +185,12 @@ public class CompilerService {
         Field field = target.getClass().getField(fieldName);
         Object value = field.get(target);
         return value instanceof List<?> ? (List<?>) value : List.of();
+    }
+
+    private int readPublicIntField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getField(fieldName);
+        Object value = field.get(target);
+        return value instanceof Integer ? (Integer) value : 1;
     }
 
     private String sqlType(String logicalType) {

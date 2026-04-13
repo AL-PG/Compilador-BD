@@ -122,6 +122,7 @@ export function useCompilerIde() {
   return {
     sourceCode,
     setSourceCode,
+    compileErrors,
     sqlCode,
     structureCode,
     statusText,

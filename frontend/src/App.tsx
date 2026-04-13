@@ -27,7 +27,7 @@ function App() {
         <ResultsPanel
           statusTone={ide.statusTone}
           statusText={ide.statusText}
-          errorsOutput={ide.errorsOutput}
+          compileErrors={ide.compileErrors}
           sqlCode={ide.sqlCode}
           structureCode={ide.structureCode}
         />
