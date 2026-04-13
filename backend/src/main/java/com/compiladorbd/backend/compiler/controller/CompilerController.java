@@ -4,6 +4,8 @@ import com.compiladorbd.backend.compiler.dto.CompileError;
 import com.compiladorbd.backend.compiler.dto.CompileRequest;
 import com.compiladorbd.backend.compiler.dto.CompileResponse;
 import com.compiladorbd.backend.compiler.service.CompilerService;
+
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/compiler")
+@CrossOrigin(origins = {"https://compilador-bd.vercel.app", "http://localhost:5173"})
 public class CompilerController {
 
     private final CompilerService compilerService;
