@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { SAMPLE_PROGRAM, compileHighLevelProgram } from '../lib/compiler'
+import { SAMPLE_PROGRAM } from '../lib/compiler'
 import { downloadTextFile } from '../lib/download'
+import { createDatabaseFromSql, compileProgramWithBackend } from '../lib/api'
 import type { CompileError, StatusTone } from '../types/compiler'
 
 export function useCompilerIde() {
@@ -12,6 +13,7 @@ export function useCompilerIde() {
     'Escribe tu lenguaje de alto nivel y ejecuta Compilar.',
   )
   const [statusTone, setStatusTone] = useState<StatusTone>('idle')
+  const [isCompiling, setIsCompiling] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
 
   const errorsOutput = useMemo(() => {
@@ -25,22 +27,38 @@ export function useCompilerIde() {
   const hasCompiledOutput =
     compileErrors.length === 0 && sqlCode.length > 0 && structureCode.length > 0
 
-  const handleCompile = () => {
-    const result = compileHighLevelProgram(sourceCode)
-    setCompileErrors(result.errors)
+  const handleCompile = async () => {
+    setIsCompiling(true)
+    setStatusTone('busy')
+    setStatusText('Compilando con el backend Spring Boot...')
 
-    if (result.errors.length > 0) {
+    try {
+      const result = await compileProgramWithBackend(sourceCode)
+      setCompileErrors(result.errors)
+
+      if (result.errors.length > 0) {
+        setSqlCode('')
+        setStructureCode('')
+        setStatusTone('warn')
+        setStatusText(`Compilacion finalizada con ${result.errors.length} error(es).`)
+        return
+      }
+
+      setSqlCode(result.sql)
+      setStructureCode(result.structure)
+      setStatusTone('ok')
+      setStatusText('Compilacion exitosa desde backend. Puedes descargar los archivos.')
+    } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : 'No se pudo contactar con el backend.'
+      setCompileErrors([{ line: 1, message: detail }])
       setSqlCode('')
       setStructureCode('')
       setStatusTone('warn')
-      setStatusText(`Compilacion finalizada con ${result.errors.length} error(es).`)
-      return
+      setStatusText('No se pudo compilar. Verifica que Spring Boot este ejecutandose.')
+    } finally {
+      setIsCompiling(false)
     }
-
-    setSqlCode(result.sql)
-    setStructureCode(result.structure)
-    setStatusTone('ok')
-    setStatusText('Compilacion exitosa. Puedes descargar los archivos de salida.')
   }
 
   const handleDownloadSql = () => {
@@ -67,7 +85,7 @@ export function useCompilerIde() {
     setStatusText('Archivo generado: estructura_bd.txt')
   }
 
-  const handleConnectAndCreate = () => {
+  const handleConnectAndCreate = async () => {
     if (!hasCompiledOutput) {
       setStatusTone('warn')
       setStatusText('Corrige errores y compila antes de crear la base de datos.')
@@ -78,13 +96,27 @@ export function useCompilerIde() {
     setStatusTone('busy')
     setStatusText('Conectando al gestor y creando la base de datos...')
 
-    window.setTimeout(() => {
-      setIsConnecting(false)
+    try {
+      const result = await createDatabaseFromSql(sqlCode)
+
+      if (!result.success) {
+        setStatusTone('warn')
+        setStatusText(result.message)
+        return
+      }
+
       setStatusTone('ok')
-      setStatusText(
-        'Conexion simulada completada. Integra aqui el endpoint real para ejecutar el SQL.',
-      )
-    }, 1400)
+      setStatusText(result.message)
+    } catch (error) {
+      const detail =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo completar la conexion con el backend.'
+      setStatusTone('warn')
+      setStatusText(`Error de conexion: ${detail}`)
+    } finally {
+      setIsConnecting(false)
+    }
   }
 
   return {
@@ -94,6 +126,7 @@ export function useCompilerIde() {
     structureCode,
     statusText,
     statusTone,
+    isCompiling,
     isConnecting,
     errorsOutput,
     hasCompiledOutput,

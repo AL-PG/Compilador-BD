@@ -1,6 +1,7 @@
 type EditorPanelProps = {
   sourceCode: string
   hasCompiledOutput: boolean
+  isCompiling: boolean
   isConnecting: boolean
   onSourceCodeChange: (value: string) => void
   onCompile: () => void
@@ -12,6 +13,7 @@ type EditorPanelProps = {
 export function EditorPanel({
   sourceCode,
   hasCompiledOutput,
+  isCompiling,
   isConnecting,
   onSourceCodeChange,
   onCompile,
@@ -35,7 +37,7 @@ export function EditorPanel({
 
       <textarea
         id="source-program"
-        className="min-h-[480px] w-full flex-1 resize-y rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 font-mono text-sm leading-relaxed text-neutral-800 transition-colors focus:border-neutral-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-neutral-400/10 max-[1024px]:min-h-[380px]"
+        className="min-h-120 w-full flex-1 resize-y rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 font-mono text-sm leading-relaxed text-neutral-800 transition-colors focus:border-neutral-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-neutral-400/10 max-[1024px]:min-h-95"
         value={sourceCode}
         onChange={(event) => onSourceCodeChange(event.target.value)}
         spellCheck={false}
@@ -47,8 +49,9 @@ export function EditorPanel({
         <button
           className={primaryButton}
           onClick={onCompile}
+          disabled={isCompiling}
         >
-          Compilar Codigo
+          {isCompiling ? 'Compilando...' : 'Compilar Codigo'}
         </button>
         <button className={neutralButton} onClick={onDownloadSql} disabled={!hasCompiledOutput}>
           Descargar SQL

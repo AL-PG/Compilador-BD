@@ -19,7 +19,7 @@ export function OutputBlock({
     <div className="flex flex-1 flex-col gap-2">
       <h3 className="text-sm font-medium tracking-tight text-neutral-700">{title}</h3>
       <textarea
-        className={`min-h-[140px] w-full flex-1 resize-y rounded-xl border p-4 font-mono text-[13px] leading-relaxed transition-colors focus:outline-none focus:ring-4 ${toneClass}`}
+        className={`min-h-35 w-full flex-1 resize-y rounded-xl border p-4 font-mono text-[13px] leading-relaxed transition-colors focus:outline-none focus:ring-4 ${toneClass}`}
         value={value}
         readOnly
         aria-label={ariaLabel}
