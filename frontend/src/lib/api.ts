@@ -1,10 +1,5 @@
 import type { CompilerResult } from '../types/compiler'
 
-type CreateDatabaseResponse = {
-  success: boolean
-  message: string
-}
-
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
 const apiBaseUrl = rawApiBaseUrl.endsWith('/')
   ? rawApiBaseUrl.slice(0, -1)
@@ -57,12 +52,5 @@ export async function compileProgramWithBackend(program: string): Promise<Compil
   return requestJson<CompilerResult>('/api/compiler/compile', {
     method: 'POST',
     body: JSON.stringify({ program }),
-  })
-}
-
-export async function createDatabaseFromSql(sql: string): Promise<CreateDatabaseResponse> {
-  return requestJson<CreateDatabaseResponse>('/api/database/create', {
-    method: 'POST',
-    body: JSON.stringify({ sql }),
   })
 }

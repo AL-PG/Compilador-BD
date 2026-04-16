@@ -1,6 +1,6 @@
 # Backend Spring Boot
 
-API REST para conectar el frontend React con la logica de compilacion y la creacion de base de datos.
+API REST para conectar el frontend React con la logica de compilacion.
 
 ## Requisitos
 
@@ -32,14 +32,6 @@ Servidor por defecto: `http://localhost:8080`
 ```json
 {
   "program": "crear base tienda; tabla usuarios con: id como numero, nombre como texto;"
-}
-```
-
-- `POST /api/database/create`
-
-```json
-{
-  "sql": "CREATE DATABASE ...;"
 }
 ```
 
@@ -78,15 +70,3 @@ Configurable en `application.properties`:
 ```properties
 app.cors.allowed-origins=http://localhost:5173
 ```
-
-## Conexion real a MySQL (opcional)
-
-Si quieres que el endpoint `/api/database/create` ejecute SQL real, configura:
-
-```properties
-app.database.jdbc-url=jdbc:mysql://localhost:3306/?allowMultiQueries=true
-app.database.username=root
-app.database.password=tu_password
-```
-
-Si no configuras estas propiedades, el endpoint responde exitosamente para validar la integracion front-back sin ejecutar SQL.

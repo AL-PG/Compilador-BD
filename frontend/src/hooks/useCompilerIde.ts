@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { SAMPLE_PROGRAM } from '../lib/compiler'
 import { downloadTextFile } from '../lib/download'
-import { createDatabaseFromSql, compileProgramWithBackend } from '../lib/api'
+import { compileProgramWithBackend } from '../lib/api'
 import type { CompileError, StatusTone } from '../types/compiler'
 
 export function useCompilerIde() {
@@ -14,7 +14,6 @@ export function useCompilerIde() {
   )
   const [statusTone, setStatusTone] = useState<StatusTone>('idle')
   const [isCompiling, setIsCompiling] = useState(false)
-  const [isConnecting, setIsConnecting] = useState(false)
 
   const errorsOutput = useMemo(() => {
     if (compileErrors.length === 0) {
@@ -85,40 +84,6 @@ export function useCompilerIde() {
     setStatusText('Archivo generado: estructura_bd.txt')
   }
 
-  const handleConnectAndCreate = async () => {
-    if (!hasCompiledOutput) {
-      setStatusTone('warn')
-      setStatusText('Corrige errores y compila antes de crear la base de datos.')
-      return
-    }
-
-    setIsConnecting(true)
-    setStatusTone('busy')
-    setStatusText('Conectando al gestor y creando la base de datos...')
-
-    try {
-      const result = await createDatabaseFromSql(sqlCode)
-
-      if (!result.success) {
-        setStatusTone('warn')
-        setStatusText(result.message)
-        return
-      }
-
-      setStatusTone('ok')
-      setStatusText(result.message)
-    } catch (error) {
-      const detail =
-        error instanceof Error
-          ? error.message
-          : 'No se pudo completar la conexion con el backend.'
-      setStatusTone('warn')
-      setStatusText(`Error de conexion: ${detail}`)
-    } finally {
-      setIsConnecting(false)
-    }
-  }
-
   return {
     sourceCode,
     setSourceCode,
@@ -128,12 +93,10 @@ export function useCompilerIde() {
     statusText,
     statusTone,
     isCompiling,
-    isConnecting,
     errorsOutput,
     hasCompiledOutput,
     handleCompile,
     handleDownloadSql,
     handleDownloadStructure,
-    handleConnectAndCreate,
   }
 }

@@ -12,25 +12,23 @@ function App() {
         <IdeHeader />
 
         <main className="grid items-start gap-6 lg:grid-cols-[minmax(400px,1.2fr)_minmax(320px,0.8fr)] max-lg:grid-cols-1">
-        <EditorPanel
-          sourceCode={ide.sourceCode}
-          hasCompiledOutput={ide.hasCompiledOutput}
-          isCompiling={ide.isCompiling}
-          isConnecting={ide.isConnecting}
-          onSourceCodeChange={ide.setSourceCode}
-          onCompile={ide.handleCompile}
-          onDownloadSql={ide.handleDownloadSql}
-          onDownloadStructure={ide.handleDownloadStructure}
-          onConnectAndCreate={ide.handleConnectAndCreate}
-        />
+          <EditorPanel
+            sourceCode={ide.sourceCode}
+            hasCompiledOutput={ide.hasCompiledOutput}
+            isCompiling={ide.isCompiling}
+            onSourceCodeChange={ide.setSourceCode}
+            onCompile={ide.handleCompile}
+            onDownloadSql={ide.handleDownloadSql}
+            onDownloadStructure={ide.handleDownloadStructure}
+          />
 
-        <ResultsPanel
-          statusTone={ide.statusTone}
-          statusText={ide.statusText}
-          compileErrors={ide.compileErrors}
-          sqlCode={ide.sqlCode}
-          structureCode={ide.structureCode}
-        />
+          <ResultsPanel
+            statusTone={ide.statusTone}
+            statusText={ide.statusText}
+            compileErrors={ide.compileErrors}
+            sqlCode={ide.sqlCode}
+            structureCode={ide.structureCode}
+          />
         </main>
       </div>
     </div>
