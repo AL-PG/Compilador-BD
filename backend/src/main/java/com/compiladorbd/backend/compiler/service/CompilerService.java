@@ -1,12 +1,14 @@
 package com.compiladorbd.backend.compiler.service;
 
+import com.compiladorbd.backend.compiler.antlr.LenguajeDBLexer;
+import com.compiladorbd.backend.compiler.antlr.LenguajeDBParser;
 import com.compiladorbd.backend.compiler.dto.CompileError;
 import com.compiladorbd.backend.compiler.dto.CompileResponse;
+import org.antlr.runtime.ANTLRStringStream;
+import org.antlr.runtime.CharStream;
+import org.antlr.runtime.CommonTokenStream;
 import org.springframework.stereotype.Service;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +25,7 @@ public class CompilerService {
         }
 
         try {
-            Object parser = createParser(program);
+            LenguajeDBParser parser = createParser(program);
             invokeScript(parser);
 
             List<CompileError> syntaxErrors = extractSyntaxErrors(parser);
@@ -39,17 +41,9 @@ public class CompilerService {
                 );
             }
 
-            String databaseName = getStringField(parser, "nombreBaseDatos");
-            List<?> tables = getListField(parser, "tablas");
+            String databaseName = parser.nombreBaseDatos == null ? "" : parser.nombreBaseDatos;
+            List<LenguajeDBParser.Tabla> tables = parser.tablas == null ? List.of() : parser.tablas;
             return buildResponse(databaseName, tables);
-        } catch (InvocationTargetException invocationTargetException) {
-            Throwable rootCause = invocationTargetException.getTargetException();
-            String message = rootCause == null ? invocationTargetException.getMessage() : rootCause.getMessage();
-            return new CompileResponse(
-                    List.of(new CompileError(1, "Error de sintaxis: " + safeMessage(message))),
-                    "",
-                    ""
-            );
         } catch (Exception exception) {
             return new CompileResponse(
                     List.of(new CompileError(1, "No se pudo procesar la gramatica: " + safeMessage(exception.getMessage()))),
@@ -59,64 +53,40 @@ public class CompilerService {
         }
     }
 
-    private List<CompileError> extractSyntaxErrors(Object parser) throws Exception {
-        List<?> rawErrors = getListField(parser, "erroresSintaxis");
+    private List<CompileError> extractSyntaxErrors(LenguajeDBParser parser) {
+        List<LenguajeDBParser.ErrorSintaxis> rawErrors = parser.erroresSintaxis == null
+                ? List.of()
+                : parser.erroresSintaxis;
         if (rawErrors.isEmpty()) {
             return List.of();
         }
 
         List<CompileError> parsedErrors = new ArrayList<>();
-        for (Object rawError : rawErrors) {
-            int line = readPublicIntField(rawError, "line");
-            String message = readPublicStringField(rawError, "message");
+        for (LenguajeDBParser.ErrorSintaxis rawError : rawErrors) {
+            int line = rawError == null ? 1 : Math.max(rawError.line, 1);
+            String message = rawError == null ? "Sin detalle." : safeMessage(rawError.message);
             parsedErrors.add(new CompileError(Math.max(line, 1), safeMessage(message)));
         }
 
         return parsedErrors;
     }
 
-    private Object createParser(String program) throws Exception {
-        Class<?> antlrInputClass = Class.forName("org.antlr.runtime.ANTLRStringStream");
-        Object input = antlrInputClass.getConstructor(String.class).newInstance(program);
-
-        Class<?> charStreamClass = Class.forName("org.antlr.runtime.CharStream");
-        Class<?> lexerClass = Class.forName("com.compiladorbd.backend.compiler.antlr.LenguajeDBLexer");
-        Object lexer = lexerClass.getConstructor(charStreamClass).newInstance(input);
-
-        Class<?> tokenSourceClass = Class.forName("org.antlr.runtime.TokenSource");
-        Class<?> commonTokenStreamClass = Class.forName("org.antlr.runtime.CommonTokenStream");
-        Object tokenStream = commonTokenStreamClass.getConstructor(tokenSourceClass).newInstance(lexer);
-
-        Class<?> parserClass = Class.forName("com.compiladorbd.backend.compiler.antlr.LenguajeDBParser");
-        Class<?> tokenStreamClass = Class.forName("org.antlr.runtime.TokenStream");
-        return parserClass.getConstructor(tokenStreamClass).newInstance(tokenStream);
+    private LenguajeDBParser createParser(String program) {
+        CharStream input = new ANTLRStringStream(program);
+        LenguajeDBLexer lexer = new LenguajeDBLexer(input);
+        CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+        return new LenguajeDBParser(tokenStream);
     }
 
-    private void invokeScript(Object parser) throws Exception {
-        Method scriptMethod = parser.getClass().getMethod("script");
-        scriptMethod.invoke(parser);
+    private void invokeScript(LenguajeDBParser parser) throws Exception {
+        parser.script();
     }
 
-    private int getSyntaxErrorsCount(Object parser) throws Exception {
-        Class<?> baseRecognizerClass = Class.forName("org.antlr.runtime.BaseRecognizer");
-        Method getSyntaxErrorsMethod = baseRecognizerClass.getMethod("getNumberOfSyntaxErrors");
-        Object value = getSyntaxErrorsMethod.invoke(parser);
-        return value instanceof Integer ? (Integer) value : 0;
+    private int getSyntaxErrorsCount(LenguajeDBParser parser) {
+        return parser.getNumberOfSyntaxErrors();
     }
 
-    private String getStringField(Object parser, String fieldName) throws Exception {
-        Field field = parser.getClass().getField(fieldName);
-        Object value = field.get(parser);
-        return value == null ? "" : value.toString();
-    }
-
-    private List<?> getListField(Object parser, String fieldName) throws Exception {
-        Field field = parser.getClass().getField(fieldName);
-        Object value = field.get(parser);
-        return value instanceof List<?> ? (List<?>) value : List.of();
-    }
-
-    private CompileResponse buildResponse(String databaseName, List<?> tablas) {
+    private CompileResponse buildResponse(String databaseName, List<LenguajeDBParser.Tabla> tablas) {
         if (databaseName == null || databaseName.isBlank()) {
             return new CompileResponse(
                     List.of(new CompileError(1, "No se pudo obtener el nombre de la base de datos.")),
@@ -125,21 +95,23 @@ public class CompilerService {
             );
         }
 
-        List<?> safeTables = tablas == null ? List.of() : tablas;
+        List<LenguajeDBParser.Tabla> safeTables = tablas == null ? List.of() : tablas;
 
         List<String> sqlBlocks = new ArrayList<>();
         sqlBlocks.add("CREATE DATABASE IF NOT EXISTS " + databaseName + ";");
         sqlBlocks.add("USE " + databaseName + ";");
 
         try {
-            for (Object table : safeTables) {
-                String tableName = readPublicStringField(table, "nombre");
-                List<?> atributos = readPublicListField(table, "atributos");
+            for (LenguajeDBParser.Tabla table : safeTables) {
+                String tableName = table == null || table.nombre == null ? "" : table.nombre;
+                List<LenguajeDBParser.Atributo> atributos = table == null || table.atributos == null
+                        ? List.of()
+                        : table.atributos;
 
                 List<String> sqlColumns = new ArrayList<>();
-                for (Object atributo : atributos) {
-                    String nombre = readPublicStringField(atributo, "nombre");
-                    String tipo = readPublicStringField(atributo, "tipo");
+                for (LenguajeDBParser.Atributo atributo : atributos) {
+                    String nombre = atributo == null || atributo.nombre == null ? "" : atributo.nombre;
+                    String tipo = atributo == null || atributo.tipo == null ? "" : atributo.tipo;
                     sqlColumns.add("  " + nombre + " " + sqlType(tipo));
                 }
 
@@ -152,15 +124,17 @@ public class CompilerService {
             structureLines.add("Base de datos: " + databaseName);
             structureLines.add("Cantidad de tablas: " + safeTables.size());
 
-            for (Object table : safeTables) {
-                String tableName = readPublicStringField(table, "nombre");
-                List<?> atributos = readPublicListField(table, "atributos");
+            for (LenguajeDBParser.Tabla table : safeTables) {
+                String tableName = table == null || table.nombre == null ? "" : table.nombre;
+                List<LenguajeDBParser.Atributo> atributos = table == null || table.atributos == null
+                        ? List.of()
+                        : table.atributos;
 
                 structureLines.add("");
                 structureLines.add("Tabla: " + tableName);
-                for (Object atributo : atributos) {
-                    String nombre = readPublicStringField(atributo, "nombre");
-                    String tipo = readPublicStringField(atributo, "tipo");
+                for (LenguajeDBParser.Atributo atributo : atributos) {
+                    String nombre = atributo == null || atributo.nombre == null ? "" : atributo.nombre;
+                    String tipo = atributo == null || atributo.tipo == null ? "" : atributo.tipo;
                     structureLines.add("  - " + nombre + ": " + tipo);
                 }
             }
@@ -168,29 +142,11 @@ public class CompilerService {
             return new CompileResponse(List.of(), String.join("\n\n", sqlBlocks), String.join("\n", structureLines));
         } catch (Exception exception) {
             return new CompileResponse(
-                    List.of(new CompileError(1, "No se pudo leer el resultado del parser ANTLR3: " + safeMessage(exception.getMessage()))),
+                    List.of(new CompileError(1, "No se pudo leer el resultado del parser ANTLR: " + safeMessage(exception.getMessage()))),
                     "",
                     ""
             );
         }
-    }
-
-    private String readPublicStringField(Object target, String fieldName) throws Exception {
-        Field field = target.getClass().getField(fieldName);
-        Object value = field.get(target);
-        return value == null ? "" : value.toString();
-    }
-
-    private List<?> readPublicListField(Object target, String fieldName) throws Exception {
-        Field field = target.getClass().getField(fieldName);
-        Object value = field.get(target);
-        return value instanceof List<?> ? (List<?>) value : List.of();
-    }
-
-    private int readPublicIntField(Object target, String fieldName) throws Exception {
-        Field field = target.getClass().getField(fieldName);
-        Object value = field.get(target);
-        return value instanceof Integer ? (Integer) value : 1;
     }
 
     private String sqlType(String logicalType) {

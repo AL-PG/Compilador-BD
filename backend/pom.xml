@@ -55,7 +55,7 @@
                 </executions>
                 <configuration>
                     <sourceDirectory>${project.basedir}/src/main/antlr3</sourceDirectory>
-                    <outputDirectory>${project.build.directory}/generated-sources/antlr3</outputDirectory>
+                    <outputDirectory>${project.basedir}/src/main/java/com/compiladorbd/backend/compiler/antlr</outputDirectory>
                 </configuration>
             </plugin>
 

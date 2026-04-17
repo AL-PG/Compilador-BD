@@ -21,7 +21,7 @@ mvn clean generate-sources
 
 Maven genera clases Java ANTLR3 en:
 
-- `target/generated-sources/antlr3`
+- `src/main/java/com/compiladorbd/backend/compiler/antlr`
 
 Servidor por defecto: `http://localhost:8080`
 
