@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 LenguajeDB.g 2026-05-20 19:03:38
+// $ANTLR 3.5.2 LenguajeDB.g 2026-05-21 01:52:06
 
 package com.compiladorbd.backend.compiler.antlr;
 
@@ -43,8 +43,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = CREAR_BASE;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:81:12: ( 'crear base' )
-			// LenguajeDB.g:81:14: 'crear base'
+			// LenguajeDB.g:90:12: ( 'crear base' )
+			// LenguajeDB.g:90:14: 'crear base'
 			{
 			match("crear base"); 
 
@@ -64,8 +64,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = TABLA;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:82:12: ( 'tabla' )
-			// LenguajeDB.g:82:14: 'tabla'
+			// LenguajeDB.g:91:12: ( 'tabla' )
+			// LenguajeDB.g:91:14: 'tabla'
 			{
 			match("tabla"); 
 
@@ -85,8 +85,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = CON;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:83:12: ( 'con:' )
-			// LenguajeDB.g:83:14: 'con:'
+			// LenguajeDB.g:92:12: ( 'con:' )
+			// LenguajeDB.g:92:14: 'con:'
 			{
 			match("con:"); 
 
@@ -106,8 +106,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = COMO;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:84:12: ( 'como' )
-			// LenguajeDB.g:84:14: 'como'
+			// LenguajeDB.g:93:12: ( 'como' )
+			// LenguajeDB.g:93:14: 'como'
 			{
 			match("como"); 
 
@@ -127,8 +127,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = TEXTO;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:85:12: ( 'texto' )
-			// LenguajeDB.g:85:14: 'texto'
+			// LenguajeDB.g:94:12: ( 'texto' )
+			// LenguajeDB.g:94:14: 'texto'
 			{
 			match("texto"); 
 
@@ -148,8 +148,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = NUMERO;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:86:12: ( 'numero' )
-			// LenguajeDB.g:86:14: 'numero'
+			// LenguajeDB.g:95:12: ( 'numero' )
+			// LenguajeDB.g:95:14: 'numero'
 			{
 			match("numero"); 
 
@@ -169,8 +169,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = FECHA;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:87:12: ( 'fecha' )
-			// LenguajeDB.g:87:14: 'fecha'
+			// LenguajeDB.g:96:12: ( 'fecha' )
+			// LenguajeDB.g:96:14: 'fecha'
 			{
 			match("fecha"); 
 
@@ -190,8 +190,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = PUNTO_COMA;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:89:12: ( ';' )
-			// LenguajeDB.g:89:14: ';'
+			// LenguajeDB.g:98:12: ( ';' )
+			// LenguajeDB.g:98:14: ';'
 			{
 			match(';'); 
 			}
@@ -210,8 +210,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = COMA;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:90:12: ( ',' )
-			// LenguajeDB.g:90:14: ','
+			// LenguajeDB.g:99:12: ( ',' )
+			// LenguajeDB.g:99:14: ','
 			{
 			match(','); 
 			}
@@ -230,8 +230,8 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = ID;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:92:12: ( ( 'a' .. 'z' | 'A' .. 'Z' | '_' ) ( 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' )* )
-			// LenguajeDB.g:92:14: ( 'a' .. 'z' | 'A' .. 'Z' | '_' ) ( 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' )*
+			// LenguajeDB.g:101:12: ( ( 'a' .. 'z' | 'A' .. 'Z' | '_' ) ( 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' )* )
+			// LenguajeDB.g:101:14: ( 'a' .. 'z' | 'A' .. 'Z' | '_' ) ( 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' )*
 			{
 			if ( (input.LA(1) >= 'A' && input.LA(1) <= 'Z')||input.LA(1)=='_'||(input.LA(1) >= 'a' && input.LA(1) <= 'z') ) {
 				input.consume();
@@ -241,7 +241,7 @@ public class LenguajeDBLexer extends Lexer {
 				recover(mse);
 				throw mse;
 			}
-			// LenguajeDB.g:92:38: ( 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' )*
+			// LenguajeDB.g:101:38: ( 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' )*
 			loop1:
 			while (true) {
 				int alt1=2;
@@ -286,10 +286,10 @@ public class LenguajeDBLexer extends Lexer {
 		try {
 			int _type = WS;
 			int _channel = DEFAULT_TOKEN_CHANNEL;
-			// LenguajeDB.g:93:12: ( ( ' ' | '\\n' | '\\t' | '\\r' )+ )
-			// LenguajeDB.g:93:14: ( ' ' | '\\n' | '\\t' | '\\r' )+
+			// LenguajeDB.g:102:12: ( ( ' ' | '\\n' | '\\t' | '\\r' )+ )
+			// LenguajeDB.g:102:14: ( ' ' | '\\n' | '\\t' | '\\r' )+
 			{
-			// LenguajeDB.g:93:14: ( ' ' | '\\n' | '\\t' | '\\r' )+
+			// LenguajeDB.g:102:14: ( ' ' | '\\n' | '\\t' | '\\r' )+
 			int cnt2=0;
 			loop2:
 			while (true) {

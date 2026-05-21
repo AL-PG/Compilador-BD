@@ -39,10 +39,18 @@ package com.compiladorbd.backend.compiler.antlr;
     public class Atributo {
         public String nombre;
         public String tipo;
+        public boolean esClave;
 
         public Atributo(String n, String t) {
             this.nombre = n;
             this.tipo = t;
+            this.esClave = false;
+        }
+
+        public Atributo(String n, String t, boolean clave) {
+            this.nombre = n;
+            this.tipo = t;
+            this.esClave = clave;
         }
     }
 
@@ -69,10 +77,11 @@ declaracion_tabla : TABLA ID CON
                     campo (COMA campo)* PUNTO_COMA
                   ;
 
-campo : ID COMO tipo
+campo : id1=ID COMO tipo (id2=ID)?
         {
+           boolean clave = ($id2 != null && "clave".equals($id2.text));
            Tabla tActual = tablas.get(tablas.size() - 1);
-           tActual.atributos.add(new Atributo($ID.text, $tipo.text));
+           tActual.atributos.add(new Atributo($id1.text, $tipo.text, clave));
         }
       ;
 

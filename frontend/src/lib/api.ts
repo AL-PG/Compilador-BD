@@ -1,4 +1,4 @@
-import type { CompilerResult } from '../types/compiler'
+import type { CompilerResult, CreateDatabaseResult } from '../types/compiler'
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
 const apiBaseUrl = rawApiBaseUrl.endsWith('/')
@@ -52,5 +52,38 @@ export async function compileProgramWithBackend(program: string): Promise<Compil
   return requestJson<CompilerResult>('/api/compiler/compile', {
     method: 'POST',
     body: JSON.stringify({ program }),
+  })
+}
+
+export async function executeSqlInMySQL(sql: string): Promise<CreateDatabaseResult> {
+  return requestJson<CreateDatabaseResult>('/api/database/create', {
+    method: 'POST',
+    body: JSON.stringify({ sql }),
+  })
+}
+
+export async function fetchTableRecords(database: string, tableName: string): Promise<unknown[]> {
+  return requestJson<unknown[]>(`/api/crud/${encodeURIComponent(database)}/${encodeURIComponent(tableName)}`, {
+    method: 'GET',
+  })
+}
+
+export async function insertRecord(database: string, tableName: string, data: Record<string, unknown>): Promise<unknown> {
+  return requestJson<unknown>(`/api/crud/${encodeURIComponent(database)}/${encodeURIComponent(tableName)}`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateRecord(database: string, tableName: string, id: string, data: Record<string, unknown>): Promise<unknown> {
+  return requestJson<unknown>(`/api/crud/${encodeURIComponent(database)}/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteRecord(database: string, tableName: string, id: string): Promise<unknown> {
+  return requestJson<unknown>(`/api/crud/${encodeURIComponent(database)}/${encodeURIComponent(tableName)}/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
   })
 }

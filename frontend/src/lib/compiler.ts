@@ -1,15 +1,18 @@
 export const SAMPLE_PROGRAM = `crear base TiendaOnline;
 
 tabla Clientes con:
+    id como numero clave,
     nombre como texto,
-    telefono como numero,
+    telefono como texto,
     nacimiento como fecha;
 
 tabla Productos con:
-    codigo_barras como numero,
+    id como numero clave,
+    codigo_barras como texto,
     descripcion como texto;
 
 tabla Pedidos con:
+    id como numero clave,
     folio como numero,
     fecha_compra como fecha,
     estatus como texto;`

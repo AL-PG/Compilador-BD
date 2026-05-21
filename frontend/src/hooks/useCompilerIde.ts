@@ -1,19 +1,22 @@
 import { useMemo, useState } from 'react'
 import { SAMPLE_PROGRAM } from '../lib/compiler'
 import { downloadTextFile } from '../lib/download'
-import { compileProgramWithBackend } from '../lib/api'
-import type { CompileError, StatusTone } from '../types/compiler'
+import { compileProgramWithBackend, executeSqlInMySQL } from '../lib/api'
+import type { CompileError, StatusTone, TableDef } from '../types/compiler'
 
 export function useCompilerIde() {
   const [sourceCode, setSourceCode] = useState(SAMPLE_PROGRAM)
   const [compileErrors, setCompileErrors] = useState<CompileError[]>([])
   const [sqlCode, setSqlCode] = useState('')
   const [structureCode, setStructureCode] = useState('')
+  const [databaseName, setDatabaseName] = useState('')
+  const [tables, setTables] = useState<TableDef[]>([])
   const [statusText, setStatusText] = useState(
     'Escribe tu lenguaje de alto nivel y ejecuta Compilar.',
   )
   const [statusTone, setStatusTone] = useState<StatusTone>('idle')
   const [isCompiling, setIsCompiling] = useState(false)
+  const [isExecutingDb, setIsExecutingDb] = useState(false)
 
   const errorsOutput = useMemo(() => {
     if (compileErrors.length === 0) {
@@ -34,6 +37,8 @@ export function useCompilerIde() {
     try {
       const result = await compileProgramWithBackend(sourceCode)
       setCompileErrors(result.errors)
+      setDatabaseName(result.databaseName || '')
+      setTables(result.tables || [])
 
       if (result.errors.length > 0) {
         setSqlCode('')
@@ -46,17 +51,48 @@ export function useCompilerIde() {
       setSqlCode(result.sql)
       setStructureCode(result.structure)
       setStatusTone('ok')
-      setStatusText('Compilacion exitosa desde backend. Puedes descargar los archivos.')
+      setStatusText('Compilacion exitosa desde backend. Puedes descargar los archivos o ejecutar en MySQL.')
     } catch (error) {
       const detail =
         error instanceof Error ? error.message : 'No se pudo contactar con el backend.'
       setCompileErrors([{ line: 1, message: detail }])
       setSqlCode('')
       setStructureCode('')
+      setDatabaseName('')
+      setTables([])
       setStatusTone('warn')
       setStatusText('No se pudo compilar. Verifica que Spring Boot este ejecutandose.')
     } finally {
       setIsCompiling(false)
+    }
+  }
+
+  const handleExecuteMySQL = async () => {
+    if (!hasCompiledOutput || !sqlCode) {
+      setStatusTone('warn')
+      setStatusText('No hay SQL para ejecutar. Compila primero sin errores.')
+      return
+    }
+
+    setIsExecutingDb(true)
+    setStatusTone('busy')
+    setStatusText('Ejecutando SQL en MySQL...')
+
+    try {
+      const result = await executeSqlInMySQL(sqlCode)
+      if (result.success) {
+        setStatusTone('ok')
+        setStatusText(result.message)
+      } else {
+        setStatusTone('warn')
+        setStatusText('Error MySQL: ' + result.message)
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'No se pudo contactar con el backend.'
+      setStatusTone('warn')
+      setStatusText('Error al ejecutar en MySQL: ' + detail)
+    } finally {
+      setIsExecutingDb(false)
     }
   }
 
@@ -90,12 +126,16 @@ export function useCompilerIde() {
     compileErrors,
     sqlCode,
     structureCode,
+    databaseName,
+    tables,
     statusText,
     statusTone,
     isCompiling,
+    isExecutingDb,
     errorsOutput,
     hasCompiledOutput,
     handleCompile,
+    handleExecuteMySQL,
     handleDownloadSql,
     handleDownloadStructure,
   }

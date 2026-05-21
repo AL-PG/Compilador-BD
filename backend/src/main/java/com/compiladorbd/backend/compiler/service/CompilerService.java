@@ -2,8 +2,10 @@ package com.compiladorbd.backend.compiler.service;
 
 import com.compiladorbd.backend.compiler.antlr.LenguajeDBLexer;
 import com.compiladorbd.backend.compiler.antlr.LenguajeDBParser;
+import com.compiladorbd.backend.compiler.dto.ColumnDef;
 import com.compiladorbd.backend.compiler.dto.CompileError;
 import com.compiladorbd.backend.compiler.dto.CompileResponse;
+import com.compiladorbd.backend.compiler.dto.TableDef;
 import org.antlr.runtime.ANTLRStringStream;
 import org.antlr.runtime.CharStream;
 import org.antlr.runtime.CommonTokenStream;
@@ -20,7 +22,9 @@ public class CompilerService {
             return new CompileResponse(
                     List.of(new CompileError(1, "Debes enviar un script con la gramatica LenguajeDB.")),
                     "",
-                    ""
+                    "",
+                    "",
+                    List.of()
             );
         }
 
@@ -30,14 +34,16 @@ public class CompilerService {
 
             List<CompileError> syntaxErrors = extractSyntaxErrors(parser);
             if (!syntaxErrors.isEmpty()) {
-                return new CompileResponse(syntaxErrors, "", "");
+                return new CompileResponse(syntaxErrors, "", "", "", List.of());
             }
 
             if (getSyntaxErrorsCount(parser) > 0) {
                 return new CompileResponse(
                         List.of(new CompileError(1, "El script contiene errores de sintaxis LenguajeDB.")),
                         "",
-                        ""
+                        "",
+                        "",
+                        List.of()
                 );
             }
 
@@ -48,7 +54,9 @@ public class CompilerService {
             return new CompileResponse(
                     List.of(new CompileError(1, "No se pudo procesar la gramatica: " + safeMessage(exception.getMessage()))),
                     "",
-                    ""
+                    "",
+                    "",
+                    List.of()
             );
         }
     }
@@ -91,7 +99,9 @@ public class CompilerService {
             return new CompileResponse(
                     List.of(new CompileError(1, "No se pudo obtener el nombre de la base de datos.")),
                     "",
-                    ""
+                    "",
+                    "",
+                    List.of()
             );
         }
 
@@ -101,6 +111,8 @@ public class CompilerService {
         sqlBlocks.add("CREATE DATABASE IF NOT EXISTS " + databaseName + ";");
         sqlBlocks.add("USE " + databaseName + ";");
 
+        List<TableDef> tableDefs = new ArrayList<>();
+
         try {
             for (LenguajeDBParser.Tabla table : safeTables) {
                 String tableName = table == null || table.nombre == null ? "" : table.nombre;
@@ -109,15 +121,27 @@ public class CompilerService {
                         : table.atributos;
 
                 List<String> sqlColumns = new ArrayList<>();
+                List<ColumnDef> columns = new ArrayList<>();
+
                 for (LenguajeDBParser.Atributo atributo : atributos) {
                     String nombre = atributo == null || atributo.nombre == null ? "" : atributo.nombre;
                     String tipo = atributo == null || atributo.tipo == null ? "" : atributo.tipo;
-                    sqlColumns.add("  " + nombre + " " + sqlType(tipo));
+                    boolean esClave = atributo != null && atributo.esClave;
+
+                    String sqlCol = "  " + nombre + " " + sqlType(tipo);
+                    if (esClave) {
+                        sqlCol += " PRIMARY KEY";
+                    }
+                    sqlColumns.add(sqlCol);
+
+                    columns.add(new ColumnDef(nombre, tipo, esClave));
                 }
 
                 sqlBlocks.add("CREATE TABLE IF NOT EXISTS " + tableName + " (\n"
                     + String.join(",\n", sqlColumns)
                     + "\n);");
+
+                tableDefs.add(new TableDef(tableName, columns));
             }
 
             List<String> structureLines = new ArrayList<>();
@@ -135,16 +159,25 @@ public class CompilerService {
                 for (LenguajeDBParser.Atributo atributo : atributos) {
                     String nombre = atributo == null || atributo.nombre == null ? "" : atributo.nombre;
                     String tipo = atributo == null || atributo.tipo == null ? "" : atributo.tipo;
-                    structureLines.add("  - " + nombre + ": " + tipo);
+                    String claveTag = (atributo != null && atributo.esClave) ? " (PK)" : "";
+                    structureLines.add("  - " + nombre + ": " + tipo + claveTag);
                 }
             }
 
-            return new CompileResponse(List.of(), String.join("\n\n", sqlBlocks), String.join("\n", structureLines));
+            return new CompileResponse(
+                    List.of(),
+                    String.join("\n\n", sqlBlocks),
+                    String.join("\n", structureLines),
+                    databaseName,
+                    tableDefs
+            );
         } catch (Exception exception) {
             return new CompileResponse(
                     List.of(new CompileError(1, "No se pudo leer el resultado del parser ANTLR: " + safeMessage(exception.getMessage()))),
                     "",
-                    ""
+                    "",
+                    "",
+                    List.of()
             );
         }
     }

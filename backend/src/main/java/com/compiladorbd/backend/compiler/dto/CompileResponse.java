@@ -2,5 +2,5 @@ package com.compiladorbd.backend.compiler.dto;
 
 import java.util.List;
 
-public record CompileResponse(List<CompileError> errors, String sql, String structure) {
+public record CompileResponse(List<CompileError> errors, String sql, String structure, String databaseName, List<TableDef> tables) {
 }

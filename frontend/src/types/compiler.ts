@@ -6,7 +6,7 @@ export type CompileError = {
 export type ColumnDef = {
   name: string
   type: string
-  constraints: string
+  primaryKey: boolean
 }
 
 export type TableDef = {
@@ -18,6 +18,13 @@ export type CompilerResult = {
   errors: CompileError[]
   sql: string
   structure: string
+  databaseName: string
+  tables: TableDef[]
+}
+
+export type CreateDatabaseResult = {
+  success: boolean
+  message: string
 }
 
 export type StatusTone = 'idle' | 'ok' | 'warn' | 'busy'

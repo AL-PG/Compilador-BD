@@ -16,8 +16,10 @@ function App() {
             sourceCode={ide.sourceCode}
             hasCompiledOutput={ide.hasCompiledOutput}
             isCompiling={ide.isCompiling}
+            isExecutingDb={ide.isExecutingDb}
             onSourceCodeChange={ide.setSourceCode}
             onCompile={ide.handleCompile}
+            onExecuteMySQL={ide.handleExecuteMySQL}
             onDownloadSql={ide.handleDownloadSql}
             onDownloadStructure={ide.handleDownloadStructure}
           />
@@ -28,6 +30,8 @@ function App() {
             compileErrors={ide.compileErrors}
             sqlCode={ide.sqlCode}
             structureCode={ide.structureCode}
+            databaseName={ide.databaseName}
+            tables={ide.tables}
           />
         </main>
       </div>

@@ -2,8 +2,10 @@ type EditorPanelProps = {
   sourceCode: string
   hasCompiledOutput: boolean
   isCompiling: boolean
+  isExecutingDb: boolean
   onSourceCodeChange: (value: string) => void
   onCompile: () => void
+  onExecuteMySQL: () => void
   onDownloadSql: () => void
   onDownloadStructure: () => void
 }
@@ -12,8 +14,10 @@ export function EditorPanel({
   sourceCode,
   hasCompiledOutput,
   isCompiling,
+  isExecutingDb,
   onSourceCodeChange,
   onCompile,
+  onExecuteMySQL,
   onDownloadSql,
   onDownloadStructure,
 }: EditorPanelProps) {
@@ -21,6 +25,7 @@ export function EditorPanel({
     'rounded-xl px-4 py-2.5 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50'
   const primaryButton = `${buttonBase} bg-neutral-900 text-white hover:bg-neutral-800 disabled:hover:bg-neutral-900`
   const neutralButton = `${buttonBase} border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 disabled:hover:bg-white disabled:hover:border-neutral-200`
+  const accentButton = `${buttonBase} bg-emerald-700 text-white hover:bg-emerald-800 disabled:hover:bg-emerald-700`
 
   return (
     <section className="flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
@@ -49,6 +54,9 @@ export function EditorPanel({
         >
           {isCompiling ? 'Compilando...' : 'Compilar Codigo'}
         </button>
+        <button className={accentButton} onClick={onExecuteMySQL} disabled={!hasCompiledOutput || isExecutingDb}>
+          {isExecutingDb ? 'Ejecutando...' : 'Ejecutar en MySQL'}
+        </button>
         <button className={neutralButton} onClick={onDownloadSql} disabled={!hasCompiledOutput}>
           Descargar SQL
         </button>
@@ -57,7 +65,7 @@ export function EditorPanel({
           onClick={onDownloadStructure}
           disabled={!hasCompiledOutput}
         >
-          Descargar JSON
+          Descargar Estructura
         </button>
       </div>
     </section>
