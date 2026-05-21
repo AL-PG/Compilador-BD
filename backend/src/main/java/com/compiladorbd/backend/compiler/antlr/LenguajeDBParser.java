@@ -1,4 +1,4 @@
-// $ANTLR 3.5.2 LenguajeDB.g 2026-04-17 10:51:22
+// $ANTLR 3.5.2 LenguajeDB.g 2026-05-20 19:03:38
 
 package com.compiladorbd.backend.compiler.antlr;
 
